@@ -1,6 +1,6 @@
 ## 从 Java 到 Go：面向对象的巨人与云原生的轻骑兵
 
-Go 语言在 2009 年被 Google 推出，在创建之初便明确提出了“少即是多（Less is more）”的设计原则，强调“以工程效率为核心，用极简规则解决复杂问题”。它与 Java 语言生态不同，Go 通过编译为 **单一静态二进制文件实现快速启动和低内存开销**，**以25个关键字强制代码简洁性**，**用接口组合替代类继承**，**以显式返回error取代异常机制** 和 **轻量级并发模型（Goroutine/Channel）** 在 **云原生基础设施领域** 占据主导地位，它也是 Java 开发者探索云原生技术栈的关键补充。本文将对 Go 语言和 Java 语言在一些重要特性上进行对比，为大家以后阅读和学习 Go 语言相关技术资料提供参考。
+Go 语言在 2009 年被 Google 推出，在创建之初便明确提出了“少即是多（Less is more）”的设计原则，强调“以工程效率为核心，用极简规则解决复杂问题”。它与 Java 语言生态不同，Go 通过编译为 **单一静态二进制文件实现快速启动和低内存开销**，**以25个关键字强制代码简洁性**，**用接口组合替代类继承**，**以显式返回error取代异常机制** 和 **轻量级并发模型（Goroutine/Channel）** 在 **云原生基础设施领域** 占据主导地位，它也是 Java 开发者探索云原生技术栈的关键补充。本文将对 Go 语言和 Java 语言在一些重要特性上进行对比，为大家以后阅读和学习 Go 语言相关技术提供参考。
 
 ### 代码组织的基本单元
 
@@ -248,6 +248,133 @@ class MyWriter implements Writer {
 }
 // 必须显式声明 implements
 ```
+
+---
+
+### “引用类型”
+
+在 Go 语言中，**严格来说并没有“引用类型”这一官方术语**，但在 Go 语言社区中通常将 **Slice（切片）、Map（映射）、Channel（通道）** 称为“引用语义类型”（或简称引用类型），因为它们的行为与传统的引用类型相似，在未被初始化时为 `nil`，并无特定的“零值”。除了这三种类型之外，Go 的其他类型（如结构体、数组、基本类型等）都是 **值类型**。
+
+#### Slice 
+
+Go 的 **Slice** 本质上是动态数组的抽象，基于底层数组实现自动扩容。它类似于 Java 中的 `ArrayList`，采用 `var s []int` 或 `s := make([]int, 5)` 声明，如下：
+
+```go
+package main
+
+import "fmt"
+
+func slice() {
+  // 初始化到小为 0 的切片
+  s := make([]int, 0)
+  // 动态追加元素
+  s = append(s, 1, 2, 3, 4, 5)
+  fmt.Println(s)
+  // 子切片，左闭右开区间 sub {2, 3}
+  sub := s[1:3]
+  fmt.Println(sub)
+  // 修改子切片值会影响到 s 原数组
+  sub[0] = 99
+  fmt.Println(s)
+}
+```
+
+#### Map
+
+Go 的 Map 本质上是无序键值对集合，基于哈希表实现。它的键必须支持 `==` 操作（如基本类型、结构体、指针），声明方式为 `m := make(map[string]int)` 或 `m := map[string]int{"a": 1}`，它与 Java 中的 `HashMap` 类似，如下所示：
+
+```go
+package main
+
+import "fmt"
+
+func learnMap() {
+  m := make(map[string]int)
+  m["a"] = 1
+  // 安全的读取
+  value, ok := m["a"]
+  if ok {
+    fmt.Println(value)
+  }
+  delete(m, "a")
+}
+```
+
+#### Channel
+
+Go 的 Channel 是用于 **协程（goroutine，Go 语言中的并发任务类似 Java 中的线程）间通信** 的管道，支持同步或异步数据传输。无缓冲区通道会阻塞发送/接收操作，直到另一端就绪。它的声明方式为 `channel := make(chan string)`（无缓冲）或 `channel := make(chan string, 3)`（有缓冲，缓冲区大小为 3），创建无缓存区的 channel 示例如下：
+
+```go
+package main
+
+import "fmt"
+
+// 创建没有缓冲区的 channel，如果向其中写入值后而没有其他协程从中取值，
+// 再向其写入值的操作则会被阻塞，也就是说“发送操作会阻塞发送 goroutine，直到另一个 goroutine 在同一 channel 上执行了接收操作”
+// 反之亦然
+func channel() {
+  channel1 := make(chan string)
+  channel2 := make(chan string)
+
+  // 启动一个协程很简单，即 go 关键字和要调用的函数
+  go abc(channel1)
+  go def(channel2)
+
+  // <- 标识符指出 channel 表示从协程中取值，输出一直都会是 adbecf
+  fmt.Print(<-channel1)
+  fmt.Print(<-channel2)
+  fmt.Print(<-channel1)
+  fmt.Print(<-channel2)
+  fmt.Print(<-channel1)
+  fmt.Println(<-channel2)
+}
+
+// <- 标识符指向 channel 表示向 channel 中发送值
+func abc(channel chan string) {
+  channel <- "a"
+  channel <- "b"
+  channel <- "c"
+}
+
+func def(channel chan string) {
+  channel <- "d"
+  channel <- "e"
+  channel <- "f"
+}
+```
+
+如果创建有缓冲的 channel，在我们的例子中，那么就可以实现写入协程不必等待 main 协程的接收操作了：
+
+```go
+package main
+
+import "fmt"
+
+func channelNoBlocked() {
+	// 表示创建缓冲区大小为 3 的 channel，并且 channel 传递的类型为 string
+	channel1 := make(chan string, 3)
+	channel2 := make(chan string, 3)
+
+	go abc(channel1)
+	go def(channel2)
+
+	// 输出一直都会是 adbecf
+	fmt.Print(<-channel1)
+	fmt.Print(<-channel2)
+	fmt.Print(<-channel1)
+	fmt.Print(<-channel2)
+	fmt.Print(<-channel1)
+	fmt.Println(<-channel2)
+}
+```
+
+---
+
+在 Go 中创建上述三种引用类型的对象时，都使用了 `make` 函数，它是专门用于初始化这三种引用类型的，如果不使用该函数，直接声明（如`var m map[string]int`）会得到 `nil` 值，而无法直接操作。它与 Java 中的 `new` 关键字操作有很大的区别，`new` 关键字会为对象分配内存 **并调用构造函数**（初始化逻辑在构造函数中），而在 Go 的设计中是没有构造函数的，Go 语言除了这三种引用类型，均为值类型，直接声明即可，声明时便会直接分配内存并初始化为零值。
+
+### 关于语言学习的想法
+
+有了大模型之后
 
 ---
 
