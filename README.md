@@ -1,10 +1,10 @@
 ## 从 Java 到 Go：面向对象的巨人与云原生的轻骑兵
 
-Go 语言在 2009 年被 Google 推出，在创建之初便明确提出了“少即是多（Less is more）”的设计原则，强调“以工程效率为核心，用极简规则解决复杂问题”。它与 Java 语言生态不同，Go 通过编译为 **单一静态二进制文件实现快速启动和低内存开销**，**以25个关键字强制代码简洁性**，**用接口组合替代类继承**，**以显式返回error取代异常机制** 和 **轻量级并发模型（Goroutine/Channel）** 在 **云原生基础设施领域** 占据主导地位，它也是 Java 开发者探索云原生技术栈的关键补充。本文将对 Go 语言和 Java 语言在一些重要特性上进行对比，为大家以后阅读和学习 Go 语言相关技术提供参考。
+Go 语言在 2009 年被 Google 推出，在创建之初便明确提出了“少即是多（Less is more）”的设计原则，强调“以工程效率为核心，用极简规则解决复杂问题”。它与 Java 语言生态不同，Go 通过编译为 **单一静态二进制文件实现快速启动和低内存开销**，**以25个关键字强制代码简洁性**，**用接口组合替代类继承**，**以显式返回error取代异常机制** 和 **轻量级并发模型（Goroutine/Channel）** 在 **云原生基础设施领域** 占据主导地位，它也是 Java 开发者探索云原生技术栈的关键补充。本文将对 Go 语言和 Java 语言在一些重要特性上进行对比，为 Java 开发者在阅读和学习 Go 语言相关技术时提供参考。
 
 ### 代码组织的基本单元
 
-在 Java 中，每个 `.java` 文件必须包含与文件名相同的 **类**（public 类），并在该类中定义相关的字段或方法等（OOP），如下定义 User 和 Address 相关的内容便需要声明两个 `.java` 文件定义类：
+在 Java 中，每个 `.java` 文件必须包含与文件名相同的 **类**（public 类），并在该类中定义相关的字段或方法等（OOP），如下定义 User 和 Address 相关的内容便需要声明两个 `.java` 文件（`User.java`, `Address.java`）定义类：
 
 ```java
 public class User {
@@ -33,7 +33,7 @@ public class Address {
 }
 ```
 
-而在 Go 语言中，每个目录下的所有 `.go` 文件共享同一个 **包名**，在包内可以定义多个类型、接口、函数和变量，如下为在 `user` 包下定义 User 和 Address 相关的内容：
+而在 Go 语言中，每个目录下的所有 `.go` 文件共享同一个 **包名**，在包内可以定义多个类型、接口、函数和变量，如下为在 `user` 包下定义 User 和 Address 相关的内容，它们都被声明在一个 `user.go` 文件中：
 
 ```go
 package user
@@ -184,6 +184,135 @@ func main() {
 ```
 
 那么我们导入的 `fmt` 包在被局部变量覆盖后便不能再被使用了。
+
+### 方法/函数的声明
+
+在 Go 语言中，方法的声明遵循 **func (接收器) 方法名(入参) 返回值** 的格式，通过 **接收器（Receiver）** 将方法绑定到类型上，如上文中 `User` 类型的声明：
+
+```go
+package user
+
+type User struct {
+	name string
+}
+
+// Name (u *User) 即为接收器，表示该方法绑定在了 User 类型上
+func (u *User) Name() string {
+	return u.name
+}
+
+func (u *User) SetName(name string) {
+	u.name = name
+}
+```
+
+而“函数”的声明不需要定义接收器，遵循的是 **func 方法名(入参) 返回值** 的格式，如将整数扩大两倍的函数：
+
+```go
+package main
+
+func double(a *int) {
+	*a *= 2
+}
+```
+
+需要注意的是，接收器参数和函数的形参中都标记了 `*` 符号，它表示 **指针接收器**，也就是说，该方法调用的时候，**操作的是原对象**，而并不是原对象的复制副本。
+
+Go 语言中有指针的概念，我们在这里说明一下：因为 Go 语言是 **“值传递”** 语言，方法/函数的形参（或接收器）中接收的实际上都是 **实参的副本**（如果不标记指针的话），那么在方法/函数中的操作并不会对原对象有影响，如果想对原对象进行操作，便需要通过指针获取到原对象才行。在如下示例中，如果我们将 `double` 方法的形参修改为之传递，这样是不能将变量 a 扩大为两倍的，因为它操作的是 a 变量的副本：
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	a := 5
+	double(a)
+	// 想要获取 10，但打印 5
+	fmt.Println(a)
+}
+
+func double(a int) {
+	a *= 2
+}
+```
+
+想要实现对原对象 a 的操作，便需要使用指针操作，将方法的声明中传入指针变量 `*int`：
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	a := 5
+	// & 为取址运算符
+	double(&a)
+	// 想要获取 10，实际获取 10
+	fmt.Println(a)
+}
+
+// *int 表示形参 a 传入的是指针
+func double(a *int) {
+	// *a 表示从地址中获取变量 a 的值
+	*a *= 2
+}
+```
+
+再回到 `User` 类型的声明中，如果我们将接收器修改成 `User`，那么 `SetName` 方法是不会对原变量进行修改的，它的修改实际上只针对的是 `User` 的副本：
+
+```go
+package user
+
+type User struct {
+	name string
+}
+
+// SetName 指定为值接收器
+func (u User) SetName(name string) {
+	u.name = name
+}
+```
+
+这样 `SetName` 方法便不会修改原对象，`SetName` 的操作也仅仅对副本生效了：
+
+```go
+package main
+
+import (
+	"fmt"
+	"learn-go/src/com/github/user"
+)
+
+func main() {
+	u := user.User{}
+	u.SetName("abc")
+	// 实际输出为 {}，并没有对原对象的 name 字段完成赋值
+	fmt.Println(u)
+}
+```
+
+在 Java 中并没有指针的概念，Java 中除了基本数据类型是值传递外，其他类型在方法间传递的都是“引用”，对引用对象的修改也是对原对象的修改。
+
+在 Go 语言中，方法/函数支持多返回值（常用于错误处理），并且如果并不需要全部的返回值，可以用 `_` 对返回值进行忽略，如下所示：
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	// 忽略掉了第三个返回值
+	s1, s2, _, e := multiReturn()
+	if e == nil {
+		fmt.Println(s1, s2)
+	}
+}
+
+func multiReturn() (string, string, string, error) {
+	return "1", "2", "2", nil
+}
+```
 
 ### 基本数据类型
 
