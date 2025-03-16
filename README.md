@@ -67,7 +67,7 @@ func (a *Address) SetCity(city string) {
 
 #### 可见性控制
 
-在 Java 中是通过 `public/protected/private` 修饰符控制成员可见性，而在 Go 语言中，通过 **首字母大小写** 控制“导出”（大写字母开头为 `public`），包的导出成员对其他包可见。以 user 包下 User 类型的定义为例，在 main 包下测试可见性如下：
+在 Java 中是通过 `public/protected/private` 修饰符控制成员可见性，而在 Go 语言中，通过 **首字母大小写** 控制“导出”（大写字母开头为 `public`），包的导出成员对其他**包**可见。以 user 包下 User 类型的定义为例，在 main 包下测试可见性如下：
 
 ```go
 package main
