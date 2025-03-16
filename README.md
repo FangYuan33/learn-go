@@ -185,6 +185,34 @@ func main() {
 
 那么我们导入的 `fmt` 包在被局部变量覆盖后便不能再被使用了。
 
+#### 常量的声明
+
+Go 语言中对常量的声明采用 `const` 关键字，并且在声明时便需要被赋值，如下所示：
+
+```go
+package main
+
+import "fmt"
+
+// DaysInWeek const 变量名 类型 = 具体的值
+const DaysInWeek int = 7
+
+func main() {
+   const name = "abc"
+   fmt.Println(name, DaysInWeek)
+}
+```
+
+在 Java 语言中对常量的声明会使用 `static final` 引用：
+
+```java
+public class Constants {
+    public static final int DAYS_IN_WEEK = 7;
+    
+    // ...
+}
+```
+
 ### 方法/函数的声明
 
 在 Go 语言中，方法的声明遵循 **func (接收器) 方法名(入参) 返回值** 的格式，通过 **接收器（Receiver）** 将方法绑定到类型上，如上文中 `User` 类型的声明：
