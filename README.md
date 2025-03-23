@@ -639,6 +639,88 @@ func channelNoBlocked() {
 
 在 Go 中创建上述三种引用类型的对象时，都使用了 `make` 函数，它是专门用于初始化这三种引用类型的，如果不使用该函数，直接声明（如`var m map[string]int`）会得到 `nil` 值，而无法直接操作。它与 Java 中的 `new` 关键字操作有很大的区别，`new` 关键字会为对象分配内存 **并调用构造函数**（初始化逻辑在构造函数中），而在 Go 的设计中是没有构造函数的，Go 语言除了这三种引用类型，均为值类型，直接声明即可，声明时便会直接分配内存并初始化为零值。
 
+### 从失败中恢复
+
+在 Go 语言中 **没有传统“异常”概念**，它不依赖 `try/catch`，而是通过 **显式返回错误值** 和 `panic/recover` 机制处理。它的错误（error）也是普通的数据，能够作为值传递。在多数方法中能看到如下类似的实现：
+
+```go
+package main
+
+func main() {
+	data, err := ReadFile("file.txt")
+	// 处理错误
+	if err != nil {
+		log.Fatal(err)
+	}
+	// ...
+}
+
+func ReadFile(path string) ([]byte, error) {
+    // 成功返回 data, nil
+    // 失败返回 nil, error
+}
+```
+
+Go 语言使用 `panic` 来处理不可恢复的或程序无法继续运行的错误（如数组越界、空指针），这类似于 Java 语言中的 `throw`，它会中断方法或函数的执行，向上抛出直到遇到 `defer` 和 `recover()` 函数的声明捕获或者程序崩溃： 
+
+```go
+// 初始化失败时触发 panic
+func initDatabase() {
+    if !checkDatabaseConnection() {
+        panic("Database connection failed!")
+    }
+}
+
+// 通过 recover 捕获 panic
+func main() {
+	// 延迟函数的执行
+    defer func() {
+		// 使用 recover() 函数尝试捕获异常 
+        if r := recover(); r != nil {
+            fmt.Println("Recovered from panic:", r)
+        }
+    }()
+    initDatabase()
+    // 正常逻辑...
+}
+```
+
+`defer` 关键字 **必须修饰的函数或方法**，而且被这个关键字修饰的函数或方法 **一旦注册** 无论如何都会被执行（类似于 Java 中的 `finally`），但如果 `defer` 声明在函数尾部，但函数在运行到该 `defer` 语句之前就退出（例如中途 `return` 或 `panic`），则 `defer` **不会注册，也不会执行**。**所以该关键字在资源被初始化之后应该立即使用，而非像 Java 一样声明在方法的尾部**。而且 `defer` 支持声明多个，但执行的顺序是逆序的。
+
+`revocer()` 函数与 `defer` 关键字搭配使用，它会返回函数执行过程中抛出的 `panic`（未发生 `panic` 时会为 `nil`），可以帮助开发者恢复或提供有用的异常信息。
+
+以下是在文件读取场景 Go 和 Java 语言在语法上的不同：
+
+- Go
+
+```go
+func readFile() {
+    file, err := os.Open("file.txt")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer file.Close()
+    // 处理文件内容
+}
+```
+
+- Java
+
+```java
+public void readFile() {
+    // try-with-resources
+    try (FileReader file = new FileReader("file.txt")) {
+        // 处理文件内容
+    } catch (IOException e) {
+        System.err.println("Error: " + e.getMessage());
+    }
+}
+```
+
+> 问：我看到其他编程语言有 `exception`。`panic` 和 `recover` 函数似乎以类似的方式工作。我可以把它们当作 `exception` 来使用吗？
+> \n
+> 答：Go语言维护者强烈建议不要这样做。甚至可以说，语言本身的设计不鼓励使用 `panic`和 `recover`。在 2012 年的一次主题会议上，RobPike（Go的创始人之一）把 `panic` 和 `recover` 描述为“故意笨拙”。这意味着，在设计 Go 时，创作者们没有试图使 `panic` 和 `recover` 被容易或愉快地使用，因此它们会很少使用。这是 Go 设计者对 `exception` 的一个主要弱点的回应：它们可以使程序流程更加复杂。相反，Go 开发人员被鼓励以处理程序其他部分的方式处理错误：使用 `if` 和 `return` 语句，以及 `error` 值。当然，直接在函数中处理错误会使函数的代码变长，但这比根本不处理错误要好得多。（Go的创始人发现，许多使用 `exception` 的开发人员只是抛出一个 `exception`，之后并没有正确地处理它。）直接处理错误也使错误的处理方式一目了然，你不必查找程序的其他部分来查看错误处理代码。所以不要在 Go 中寻找等同于 `exception` 的东西。这个特性被故意省略了。对于习惯了使用 `exception` 的开发人员来说，可能需要一段时间的调整，但 Go 的维护者相信，这最终会使软件变得更好。
+
 ### for 和 if
 
 #### for
