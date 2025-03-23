@@ -637,6 +637,52 @@ func channelNoBlocked() {
 
 在 Go 中创建上述三种引用类型的对象时，都使用了 `make` 函数，它是专门用于初始化这三种引用类型的，如果不使用该函数，直接声明（如`var m map[string]int`）会得到 `nil` 值，而无法直接操作。它与 Java 中的 `new` 关键字操作有很大的区别，`new` 关键字会为对象分配内存 **并调用构造函数**（初始化逻辑在构造函数中），而在 Go 的设计中是没有构造函数的，Go 语言除了这三种引用类型，均为值类型，直接声明即可，声明时便会直接分配内存并初始化为零值。
 
+### for 和 if
+
+#### for
+
+Go 语言的循环语法只有 `for`，没有 `while` 或 `do-while`，但可实现所有循环模式：
+
+```go
+// 1. 经典三段式（类似 Java 的 for 循环）
+for i := 0; i < 5; i++ {
+    fmt.Println(i)
+}
+
+// 2. 类似 while 循环（条件在前）
+sum := 0
+for sum < 10 {
+    sum += 2
+}
+
+// 3. 无限循环（省略条件）
+for {
+    fmt.Println("Infinite loop")
+    break  // 需手动退出
+}
+
+// 4. 遍历集合，采用 range 关键字，index 和 value 分别表示索引和值
+arr := []int{1, 2, 3}
+for index, value := range arr {
+    fmt.Printf("Index: %d, Value: %d\n", index, value)
+}
+```
+
+#### if
+
+Go 语言的 `if` 语法相比于 Java 支持声明 + 条件的形式，并且强制要求大括号（即使是单行语句也必须使用 `{}`）：
+
+```go
+// 支持简短声明（声明 + 条件）
+if num := 10; num > 5 {  
+    fmt.Println("num is greater than 5")
+}
+// 简单判断
+if num > 5 {
+    fmt.Println("num is greater than 5")
+}
+```
+
 ### 关于语言学习的想法
 
 有了大模型之后
