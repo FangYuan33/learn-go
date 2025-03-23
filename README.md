@@ -342,6 +342,114 @@ func multiReturn() (string, string, string, error) {
 }
 ```
 
+### 接口
+
+Go 语言也支持接口的声明，不过相比于 Java 语言它更追求 **“灵活与简洁”**。Go 的接口实现是隐式地，只要类型实现了接口的所有方法，就自动满足该接口，无需显式声明。如下：
+
+```go
+package writer
+
+type Writer interface {
+   Write([]byte) (int, error)
+}
+
+// File 无需声明实现 Writer
+type File struct{} 
+func (f File) Write(data []byte) (int, error) {
+   return len(data), nil
+}
+```
+
+Java 语言则必须通过 `implements` 关键字声明类对接口的实现：
+
+```java
+public interface Writer {
+   int write(byte[] data);
+}
+
+public class File implements Writer {  // 必须显式声明
+   @Override
+   public int write(byte[] data) {
+      return data.length;
+   }
+}
+```
+
+它们对类型的判断也是不同的，在 Go 语言中采用如下语法：
+
+```go
+package writer
+
+func typeTransfer() {
+   var w Writer = File{}
+   // 判断是否为 File 类型，如果是的话 ok 为 true
+   f, ok := w.(File)
+   if ok {
+      f.Write(data)
+   }
+}
+```
+
+而在 Java 语言中则采用 `instanceof` 和强制类型转换：
+
+```java
+private void typeTransfer() {
+   Writer w = new File();
+   if (w instanceof File) {
+      File f = (File) w;
+      f.write(data);
+   }
+}
+```
+
+Go 语言还采用空接口 `interface{}` 来表示任意类型，作为方法入参时则支持任意类型方法的传入，类似 Java 中的 `Object` 类型：
+
+```go
+package writer
+
+func ProcessData(data interface{}) {
+	// ...
+}
+```
+
+除此之外，Go 语言在 1.18+ 版本引入了泛型，采用 `[T any]` 方括号语法定义类型约束，`any` 表示任意类型，如果采用具体类型限制则如下所示：
+
+```go
+package writer
+
+// Stringer 定义约束：要求类型支持 String() 方法
+type Stringer interface {
+    String() string
+}
+
+func ToString[T Stringer](v T) string {
+    return v.String()
+}
+```
+
+这样便能使用类型安全替代空接口 `interface{}`，避免运行时类型断言：
+
+```go
+// 旧方案：空接口 + 类型断言
+func OldMax(a, b interface{}) interface{} {
+    // 需要手动断言类型，易出错
+}
+
+// 新方案：泛型
+func NewMax[T Ordered](a, b T) T { /* 直接比较 */ }
+```
+
+泛型还在通用数据结构上有广泛的应用：
+
+```go
+type Stack[T any] struct {
+    items []T
+}
+func (s *Stack[T]) Push(item T) {
+    s.items = append(s.items, item)
+}
+```
+
 ### 基本数据类型
 
 Go 的基本数据类型分为 **4 大类**，相比于 Java 更简洁且明确：
