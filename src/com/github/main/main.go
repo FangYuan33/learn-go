@@ -5,6 +5,8 @@ import (
 	"learn-go/src/com/github/user"
 )
 
+var global int = 1
+
 func main() {
 	var u user.User
 	// fmt.Println(u.name)
